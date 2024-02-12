@@ -1,0 +1,64 @@
+-- SQL Queries used for Week 3 HW3
+
+-- SETUP: Creating an external table and a table using Green Taxi Trip Records Data for 2022 stored in a GCS Bucket
+CREATE OR REPLACE EXTERNAL TABLE `<project-name>.trips_data_all.external_table_green`
+OPTIONS(
+  format = 'PARQUET',
+  uris = ['gs://<project-name>-bucket/Green_2022/*']
+);
+
+CREATE OR REPLACE TABLE <project-name>.trips_data_all.green_tripdata_2022_nonpartitioned AS
+SELECT * FROM <project-name>.trips_data_all.external_table_green;
+
+
+--Question 1: What is count of records for the 2022 Green Taxi Data??
+SELECT COUNT(*)
+FROM ny-rides-413103.trips_data_all.external_table_green;
+
+
+--Question 2:
+--Write a query to count the distinct number of PULocationIDs for the entire dataset on both the tables.
+--What is the estimated amount of data that will be read when this query is executed on the External Table and the Table?
+SELECT COUNT(DISTINCT(PULocationID))
+FROM <project-name>.trips_data_all.external_table_green;
+
+SELECT COUNT(DISTINCT(PULocationID))
+FROM <project-name>.trips_data_all.green_tripdata_2022_nonpartitioned;
+
+
+--Question 3: How many records have a fare_amount of 0?
+SELECT COUNT(*)
+FROM <project-name>.trips_data_all.green_tripdata_2022_nonpartitioned
+WHERE fare_amount=0.00;
+
+
+--Question 4:
+--What is the best strategy to make an optimized table in Big Query if your query will always order the results by PUlocationID and filter based on lpep_pickup_datetime? (Create a new table with this strategy)
+CREATE OR REPLACE TABLE <project-name>.trips_data_all.green_tripdata_2022_partitioned
+PARTITION BY PULocationID
+CLUSTER BY lpep_pickup_datetime AS
+SELECT * FROM <project-name>.trips_data_all.green_tripdata_2022_nonpartitioned;
+
+CREATE OR REPLACE TABLE <project-name>.trips_data_all.green_tripdata_2022_partitioned
+PARTITION BY DATE(lpep_pickup_datetime) 
+CLUSTER BY PULocationID AS
+SELECT * FROM <project-name>.trips_data_all.green_tripdata_2022_nonpartitioned;
+
+CREATE OR REPLACE TABLE <project-name>.trips_data_all.green_tripdata_2022_partitioned
+PARTITION BY DATE(lpep_pickup_datetime)
+PARTITION BY PULocationID AS
+SELECT * FROM <project-name>.trips_data_all.green_tripdata_2022_nonpartitioned;
+
+CREATE OR REPLACE TABLE <project-name>.trips_data_all.green_tripdata_2022_partitioned
+CLUSTER BY lpep_pickup_datetime, PULocationID AS
+SELECT * FROM <project-name>.trips_data_all.green_tripdata_2022_nonpartitioned;
+
+
+--Question 5:
+SELECT DISTINCT(PULocationID)
+FROM <project-name>.trips_data_all.green_tripdata_2022_nonpartitioned
+WHERE DATE(lpep_pickup_datetime) BETWEEN '2022-06-01' AND '2022-06-30';
+
+SELECT DISTINCT(PULocationID)
+FROM <project-name>.trips_data_all.green_tripdata_2022_partitioned
+WHERE DATE(lpep_pickup_datetime) BETWEEN '2022-06-01' AND '2022-06-30';
